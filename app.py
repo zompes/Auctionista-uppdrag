@@ -1,4 +1,3 @@
-
 # Create Environment
 # pip install flask
 # pip install pymysql
@@ -145,12 +144,38 @@ def skapa_objekt():
                 conn.close()
 
 # 7
+@app.route("/api/auktionsobjekts/<id>/bud", methods=["GET"])
+def get_auction_bid(id: str):
+    conn = mysql.connect()
+    cursor = conn.cursor(pymysql.cursors.DictCursor)
+    try:
+        query = "SELECT * FROM bud auktionsobjekts = %s"
+        cursor.execute(query, (id,))
+        rows = cursor.fetchall()
+        response = jsonify(rows)
+        response.status_code = 200
+        return response
+    except Exception as e:
+        print(e)
 
 # 8
+@app.route("/api/auktionsobjekts/titel/<titel_id>", methods=["GET"])
+def fem_senaste_buden():
+    conn = mysql.connect()
+    cursor = conn.cursor(pymysql.cursors.DictCursor)
+    try:
+        # query är fel
+        query = "SELECT tidpunkt, bud, titel, auktionsobjekts.beskrivning, starttid, sluttid, bild, saljare FROM auktionsobjekts, bud where auktionsobjekts.titel = %s ORDER BY tidpunkt DESC LIMIT 5"
+        bind = (request.json["titel"])
+        cursor.execute(query, bind)
+        rows = cursor.fetchall()
+        response = jsonify(rows)
+        response.status_code = 200
+        return response
+    except Exception as e:
+        print(e)
 
-# 9
-
-# 10
+# 9, 10
 @app.route("/api/<auktionsobjekts_id>", methods=["POST"])
 def stoppa_bud_po_eget_objekt():
     conn = mysql.connect()
@@ -176,7 +201,35 @@ def stoppa_bud_po_eget_objekt():
             return "error"
         finally:
                 cursor.close()
-                conn.close()        
+                conn.close()     
+
+@app.route("/api/auktionsobjekt/<id>/bid", methods=["POST"])
+def post_bid(id: str):
+    conn = mysql.connect()
+    cursor = conn.cursor(pymysql.cursors.DictCursor)
+    if session.get("user"):
+        try:
+            query = "select saljare from auktionsobjekts where id = %s"
+            bind = request.json["auktionsobjekts_id"]
+            cursor.execute(query, bind)
+            saljare = cursor.fetchone()
+            # Nr. 10
+            if saljare is not session.get("user"):
+                query = "INSERT INTO bud SET bud = %s"
+                bind = request.json["bud"]
+                cursor.execute(query, bind)
+                conn.commit()
+                response = jsonify({"Budets har lagts": cursor.lastrowid})
+                response._status_code = 200
+                return response
+            else:
+                return print("Du kan inte buda på ditt eget objekt")
+        except Exception as e:
+            print(e)
+            return "error"
+        finally:
+            cursor.close()
+            conn.close()   
 
 # this route should only work if logged in
 @app.route("/api/protected-data", methods=["GET"])
