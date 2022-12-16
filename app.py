@@ -37,6 +37,7 @@ def login():
         user = cursor.fetchone()        
         if user['email']:
             session['user'] = user
+            print(session.get("user"))
             return jsonify({"login": True})
     except Exception as e:
         return jsonify({"login": False})
@@ -91,7 +92,7 @@ def objektdetalj(id: int):
     conn = mysql.connect()
     cursor = conn.cursor(pymysql.cursors.DictCursor)
     try:
-        query = "SELECT titel, beskrivning, starttid, sluttid, bild, saljare, bud, tidpunkt FROM auktionsobjekts, bud where auktionsobjekts.id = %s;"
+        query = "SELECT titel, beskrivning, starttid, sluttid, bild, saljare, bud, tidpunkt FROM auktionsobjekts, bud WHERE auktionsobjekts.id = %s;"
         bind = (id)
         cursor.execute(query, bind)
         rows = cursor.fetchall()
@@ -144,13 +145,18 @@ def skapa_objekt():
                 conn.close()
 
 # 7
-@app.route("/api/auktionsobjekts/<id>/bud", methods=["GET"])
-def get_auction_bid(id: str):
+@app.route("/api/auktionsobjekts/bud", methods=["GET"])
+def get_auction_bid():
     conn = mysql.connect()
     cursor = conn.cursor(pymysql.cursors.DictCursor)
     try:
-        query = "SELECT * FROM bud auktionsobjekts = %s"
-        cursor.execute(query, (id,))
+        query = """
+        SELECT auktionsobjekts.titel, MAX(bud.bud) AS bud
+        FROM auktionsobjekts
+        JOIN bud
+        ON auktionsobjekts.id = bud.auktionobjekt
+        GROUP BY auktionsobjekts.titel;"""
+        cursor.execute(query)
         rows = cursor.fetchall()
         response = jsonify(rows)
         response.status_code = 200
@@ -159,15 +165,34 @@ def get_auction_bid(id: str):
         print(e)
 
 # 8
-@app.route("/api/auktionsobjekts/titel/<titel_id>", methods=["GET"])
-def fem_senaste_buden():
+# Visar dem senaste 5 buden på ett specifikt auktionsobjekt som användaren matar in
+@app.route("/api/auktionsobjekts/<id>", methods=["GET"])
+def fem_senaste_buden(id : str):
     conn = mysql.connect()
     cursor = conn.cursor(pymysql.cursors.DictCursor)
     try:
-        # query är fel
-        query = "SELECT tidpunkt, bud, titel, auktionsobjekts.beskrivning, starttid, sluttid, bild, saljare FROM auktionsobjekts, bud where auktionsobjekts.titel = %s ORDER BY tidpunkt DESC LIMIT 5"
-        bind = (request.json["titel"])
+        query = """
+        SELECT tidpunkt, bud, titel, auktionsobjekts.beskrivning, 
+        starttid, sluttid, bild, saljare FROM auktionsobjekts, bud 
+        where auktionsobjekts.id = %s ORDER BY tidpunkt DESC LIMIT 5"""
+        bind = (id,)
         cursor.execute(query, bind)
+        rows = cursor.fetchall()
+        response = jsonify(rows)
+        response.status_code = 200
+        return response
+    except Exception as e:
+        print(e)
+ 
+# Visar dem 5 senaste lagda buden, bryr sig inte om auktionsobjekt utan bara
+# tiden buden lades. Sorteras efter tidpunkt kulumen i bud tabellen.
+@app.route("/api/fem_senaste_lagda_bud", methods=["GET"])
+def fem_senaste_lagda_bud():
+    conn = mysql.connect()
+    cursor = conn.cursor(pymysql.cursors.DictCursor)
+    try:
+        query = "SELECT * FROM fem_senaste_lagda_bud"
+        cursor.execute(query)
         rows = cursor.fetchall()
         response = jsonify(rows)
         response.status_code = 200
@@ -176,15 +201,15 @@ def fem_senaste_buden():
         print(e)
 
 # 9, 10
-@app.route("/api/<auktionsobjekts_id>", methods=["POST"])
-def stoppa_bud_po_eget_objekt():
+@app.route("/api/auktionsobjekts/<auktionsobjekts_id>/bud", methods=["POST"])
+def bud(auktionsobjekts_id : str):
     conn = mysql.connect()
     cursor = conn.cursor(pymysql.cursors.DictCursor)
     if session.get("user"):
         try:
-            query = "select saljare from auktionsobjekts where id = %s"
-            bind = (request.json["auktionsobjekts_id"])
-            cursor.execute(query,bind)
+            query = "SELECT saljare FROM auktionsobjekts WHERE id = %s"
+            bind = request.json["auktionsobjekts_id"]
+            cursor.execute(query, bind)
             saljare = cursor.fetchone()
             if saljare is not session.get('user'):
                 query = "INSERT INTO bud SET bud = %s"
@@ -203,33 +228,39 @@ def stoppa_bud_po_eget_objekt():
                 cursor.close()
                 conn.close()     
 
-@app.route("/api/auktionsobjekt/<id>/bid", methods=["POST"])
-def post_bid(id: str):
+@app.route("/api/auktionsobjekt/<id>/bud", methods=["POST"])
+def post_bid(id: int):
+    return jsonify(session["user"])
     conn = mysql.connect()
     cursor = conn.cursor(pymysql.cursors.DictCursor)
+    print(session.get("user"))
     if session.get("user"):
         try:
             query = "select saljare from auktionsobjekts where id = %s"
-            bind = request.json["auktionsobjekts_id"]
+            bind = (id)
             cursor.execute(query, bind)
             saljare = cursor.fetchone()
+            print(saljare)
+            print(session.get("user"))
             # Nr. 10
             if saljare is not session.get("user"):
-                query = "INSERT INTO bud SET bud = %s"
-                bind = request.json["bud"]
+                query = "INSERT INTO bud SET bud = %s, konto = %s, auktionsobjekt = %s"
+                bind = (request.json["bud"], session.get("user")["id"], id)
                 cursor.execute(query, bind)
                 conn.commit()
                 response = jsonify({"Budets har lagts": cursor.lastrowid})
                 response._status_code = 200
                 return response
             else:
-                return print("Du kan inte buda på ditt eget objekt")
+                return jsonify("Du kan inte buda på ditt eget objekt")
         except Exception as e:
             print(e)
-            return "error"
+            return jsonify("error")
         finally:
             cursor.close()
-            conn.close()   
+            conn.close()
+    else:
+        return jsonify("Logga in")
 
 # this route should only work if logged in
 @app.route("/api/protected-data", methods=["GET"])
