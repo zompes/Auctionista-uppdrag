@@ -92,7 +92,7 @@ def objektdetalj(id: int):
     conn = mysql.connect()
     cursor = conn.cursor(pymysql.cursors.DictCursor)
     try:
-        query = "SELECT titel, beskrivning, starttid, sluttid, bild, saljare, bud, tidpunkt FROM auktionsobjekts, bud WHERE auktionsobjekts.id = %s;"
+        query = "SELECT titel, beskrivning, starttid, sluttid, bild, saljare, bud, tidpunkt FROM auktionsobjekts, bud WHERE auktionsobjekts.id = %s"
         bind = (id)
         cursor.execute(query, bind)
         rows = cursor.fetchall()
@@ -171,11 +171,17 @@ def fem_senaste_buden(id : str):
     conn = mysql.connect()
     cursor = conn.cursor(pymysql.cursors.DictCursor)
     try:
+        # Query fungerar korrekt i Beekeeper men inte här, vet inte varför.
+        # Jag tror att efter %s i query:en så går programmet tills nästa del och
+        # ignorerar resten av query:en.
         query = """
         SELECT tidpunkt, bud, titel, auktionsobjekts.beskrivning, 
-        starttid, sluttid, bild, saljare FROM auktionsobjekts, bud 
-        where auktionsobjekts.id = %s ORDER BY tidpunkt DESC LIMIT 5"""
-        bind = (id,)
+        starttid, sluttid, bild, saljare 
+        FROM auktionsobjekts, bud 
+        WHERE auktionsobjekts.id = %s AND bud.auktionobjekt = auktionsobjekts.id
+        ORDER BY tidpunkt DESC 
+        LIMIT 5"""
+        bind = (id)
         cursor.execute(query, bind)
         rows = cursor.fetchall()
         response = jsonify(rows)
@@ -230,7 +236,6 @@ def bud(auktionsobjekts_id : str):
 
 @app.route("/api/auktionsobjekt/<id>/bud", methods=["POST"])
 def post_bid(id: int):
-    return jsonify(session["user"])
     conn = mysql.connect()
     cursor = conn.cursor(pymysql.cursors.DictCursor)
     print(session.get("user"))
