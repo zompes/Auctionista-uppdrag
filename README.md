@@ -37,22 +37,23 @@ syntax:
     "bild" : ""
 }
 
-Hur man får dem senaste 5 buden på ett objekt du själv matar in:
+Hur man får detaljer på ett objekt du själv matar in:
 http://127.0.0.1:5001/api/auktionsobjekts/<id>
 Hur den används är att ändra <id> till en siffra som tillhör ett objekt i
 auktionsobjekts tabellen.
-Exempel: http://127.0.0.1:5001/api/auktionsobjekts/<3> ger dig dem 5 senaste
-buden på skor.
+Exempel: http://127.0.0.1:5001/api/auktionsobjekts/3 ger dig allt om objektet 3 i auktionsobjekts tabellen.
 
 Hur man får dem 5 senaste buden, bryr sig bara om när dem kom ut:
 http://localhost:5001/api/fem_senaste_lagda_bud
 Listan sorteras efter tidpunkt kolumen i bud tabellen.
 
 Hur man lägger till ett bud:
-http://localhost:5001/api/auktionsobjekt/<id>/bud
+http://localhost:5001/api/auktionsobjekts/<id>/bud
 syntax:
 {
-    "bud" : bud nummer
+    "bud" : bud nummer,
+    "konto" : konto nummer,
+    "auktionsobjekt" : auktionsobjekt nummer
 }
 För tillfället fungerar inte denna funktionen, något med att inloggningen
 med ett konto blir "None" i funktionen. Händer endast i denna.

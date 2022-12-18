@@ -234,7 +234,7 @@ def bud(auktionsobjekts_id : str):
                 cursor.close()
                 conn.close()     
 
-@app.route("/api/auktionsobjekt/<id>/bud", methods=["POST"])
+@app.route("/api/auktionsobjekts/<id>/bud", methods=["POST"])
 def post_bid(id: int):
     conn = mysql.connect()
     cursor = conn.cursor(pymysql.cursors.DictCursor)
