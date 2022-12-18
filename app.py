@@ -92,7 +92,7 @@ def objektdetalj(id: int):
     conn = mysql.connect()
     cursor = conn.cursor(pymysql.cursors.DictCursor)
     try:
-        query = "SELECT titel, beskrivning, starttid, sluttid, bild, saljare, bud, tidpunkt FROM auktionsobjekts, bud WHERE auktionsobjekts.id = %s"
+        query = "SELECT titel, beskrivning, starttid, sluttid, bild, saljare, bud, tidpunkt FROM auktionsobjekts, bud WHERE auktionsobjekts.id = %s ORDER BY tidpunkt DESC LIMIT 1"
         bind = (id)
         cursor.execute(query, bind)
         rows = cursor.fetchall()
